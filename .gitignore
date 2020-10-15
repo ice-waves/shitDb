@@ -1,4 +1,4 @@
 shitDb
 tmp/
 .idea/
-./model
+model/

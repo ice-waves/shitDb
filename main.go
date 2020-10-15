@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"os"
 	"os/exec"
 	"strings"
 	"unicode"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var TypeMapping = map[string]string{
@@ -163,12 +164,21 @@ func checkError(err error) {
 
 }
 
+func exist(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil || os.IsExist(err)
+}
+
 func createModel(modelPath, modelFile, packageName string, fieldInfo []Field) {
 	err := os.MkdirAll(modelPath, os.ModePerm)
 	checkError(err)
 	fmt.Println("创建路径成功...")
 
 	// 创建model
+	if existFile := exist(modelFile); existFile {
+		os.Remove(modelFile)
+	}
+
 	file, err := os.OpenFile(modelFile, os.O_RDWR|os.O_CREATE, 0766)
 	checkError(err)
 	defer file.Close()
@@ -183,15 +193,15 @@ func createModel(modelPath, modelFile, packageName string, fieldInfo []Field) {
 	for _, value := range fieldInfo {
 		var columnStr = ""
 		if value.fieldName == "id" {
-			columnStr = "\t" + strings.ToUpper(value.fieldName) + "\t\t" + TypeMapping[value.dataType] + "\t\t" + "`gorm:column:" + value.fieldName + " json:\"" + value.fieldName + "\"" + "`\n"
+			columnStr = "\t" + strings.ToUpper(value.fieldName) + "\t\t" + TypeMapping[value.dataType] + "\t\t" + "`gorm:" + "\"" + "column:" + value.fieldName + "\"" + " json:\"" + value.fieldName + "\"" + "`\n"
 		} else {
-			columnStr = "\t" + UnderlineToBigCamel(value.fieldName, "_") + "\t\t" + TypeMapping[value.dataType] + "\t\t" + "`gorm:column:" + value.fieldName + " json:\""+ value.fieldName+ "\"" + "`\n"
+			columnStr = "\t" + UnderlineToBigCamel(value.fieldName, "_") + "\t\t" + TypeMapping[value.dataType] + "\t\t" + "`gorm:" + "\"" + "column:" + value.fieldName + "\"" + " json:\"" + value.fieldName + "\"" + "`\n"
 		}
 		write.WriteString(columnStr)
 	}
 	write.WriteString("\n}\n\n")
 
-	write.WriteString("func ("+ upModelName +") TableName() string {\n\treturn" + " \"" + *modelName + "\"\n}")
+	write.WriteString("func (" + upModelName + ") TableName() string {\n\treturn" + " \"" + *modelName + "\"\n}")
 
 	write.Flush()
 
